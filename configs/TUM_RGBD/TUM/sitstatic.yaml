@@ -1,0 +1,47 @@
+# Copyright 2024 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+inherit_from: ./configs/TUM_RGBD/TUM/tum.yaml
+scene: rgbd_dataset_freiburg3_sitting_static
+
+data:
+  input_folder: rgbd_dataset_freiburg3_sitting_static
+cam:
+  H: 480 
+  W: 640 
+  fx: 535.4
+  fy: 539.2
+  cx: 320.1
+  cy: 247.6
+mapping:
+  shift: 1.1
+  s: 1.135
+  opt_params:
+    grid_lr_init: 0.0009 #0.0016
+    deformation_lr_init: 0.00022
+  ModelHiddenParams:
+    net_width: 64
+    multires: [1, 2, 4, 8]
+    plane_tv_weight: 0.0002
+    time_smoothness_weight: 0.001
+    l1_time_planes:  0.0001
+    kplanes_config:
+      grid_dimensions: 2
+      input_coordinate_dim: 4
+      output_coordinate_dim: 32
+      resolution: [64, 64, 64, 345]  # [64,64,64]: resolution of spatial grid. 345: resolution of temporal grid, better to be half length of dynamic frames
+tracking:
+  motion_filter:
+    thresh: 0.5 # add ne
+    

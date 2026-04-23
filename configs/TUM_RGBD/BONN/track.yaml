@@ -1,0 +1,47 @@
+
+# Copyright 2024 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+inherit_from: ./configs/TUM_RGBD/BONN/bonn.yaml
+scene: rgbd_bonn_person_tracking
+
+data:
+  input_folder: rgbd_bonn_person_tracking
+cam:  #intrinsic is same per scene in BONN
+  H: 480 
+  W: 640
+  fx: 542.822841
+  fy: 542.576870
+  cx: 315.593520
+  cy: 237.756098
+  crop_edge: 8
+  crop_size: [450,600]
+  distortion: [0.039903, -0.099343, -0.000730, -0.000144, 0.000000]
+  near: 0
+  far: 5
+tracking:
+  buffer: 1200
+  motion_filter:
+    thresh: 2
+    dynamic_later: True
+    dynamic_thresh: 0.9
+    dynamic_frame: 60
+mapping:
+  Training:
+      flow_loss: 3
+      flow_loss_fine: 2
+mapping:
+  first_s: 2.916740894317627
+  s: 1.135
+  shift: 1.1

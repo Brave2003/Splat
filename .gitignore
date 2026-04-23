@@ -1,0 +1,46 @@
+# Python cache and build artifacts
+__pycache__/
+*.pyc
+*.egg*
+*.so
+*.db
+build/
+
+# IDE/workspace files
+.vscode/
+*.code-workspace
+.codex/
+
+# Model weights and checkpoints
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+pretrained/
+
+# Logs and experiment tracking artifacts
+log/
+logs/
+*.log
+wandb/
+
+# Generated outputs
+output/
+output_*/
+normal_sitting_back_output/
+
+# Local datasets and generated assets
+datasets/
+camera_poses/
+depth_estimator/
+cull_replica_mesh/
+
+# Project/local temp entries
+GO-SLAM/
+keyframeidx.txt
+SUMMARY
+evaluate_on*
+euler/
+*test.sh
+try mask_output
