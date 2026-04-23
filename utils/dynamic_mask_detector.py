@@ -444,14 +444,15 @@ def run_sam2_with_flow_dino(
     
     # 暂不使用 neg_seed_np，负样本传全零
     neg_for_sam = np.zeros_like(pos_seed_np, dtype=np.uint8)
-    
-    sam2_mask_np = sam_refine_fn(rgb_np=img_u8, pos_mask=pos_seed_np, neg_mask=neg_for_sam, tmp_root=tmp_root, no_prompt=False)
-    sam2_mask_t = torch.from_numpy(sam2_mask_np.astype(bool)).to(device)
-    sam2_prob = sam2_mask_t.float()
-    p_dyn_sam2 = ((yolo_dynamic + sam2_prob) / 2.0).clamp(0.0, 1.0)
-
-    # p_dyn_sam2 = ((yolo_dynamic * 2) / 2.0).clamp(0.0, 1.0)
-    return sam2_prob, p_dyn_sam2
+    if False:
+        sam2_mask_np = sam_refine_fn(rgb_np=img_u8, pos_mask=pos_seed_np, neg_mask=neg_for_sam, tmp_root=tmp_root, no_prompt=False)
+        sam2_mask_t = torch.from_numpy(sam2_mask_np.astype(bool)).to(device)
+        sam2_prob = sam2_mask_t.float()
+        p_dyn_sam2 = ((yolo_dynamic + sam2_prob) / 2.0).clamp(0.0, 1.0)
+        return sam2_prob, p_dyn_sam2
+    else:
+        p_dyn_sam2 = ((yolo_dynamic * 2) / 2.0).clamp(0.0, 1.0)
+        return None, p_dyn_sam2
 
 
 # ============================================================================
