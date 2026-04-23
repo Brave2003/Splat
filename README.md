@@ -38,9 +38,9 @@ This is not an officially endorsed Google product.
 1. Clone the repo using the `--recursive` flag.
 
 ```bash
-git clone --recursive https://github.com/Brave2003/Try-in-Splat-SLAM.git
-mv Try-in-Splat-SLAM Anonymous   # 可选：保持项目目录名为 Anonymous
-cd Anonymous
+git clone --recursive https://github.com/Brave2003/Splat.git
+cd Splat
+# 可选：mv Splat Anonymous && cd Anonymous
 ```
 
 2. Create a new conda environment (recommended name: `splat`).

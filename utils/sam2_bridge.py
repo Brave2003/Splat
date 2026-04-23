@@ -1,6 +1,5 @@
 import os
 import subprocess
-import uuid
 
 import numpy as np
 import imageio.v2 as imageio  # 可换成 cv2.imwrite
@@ -71,9 +70,9 @@ def sam2_refine_dynamic_mask(
     if tmp_root is None:
         tmp_root = SAM2_IO_ROOT
     os.makedirs(tmp_root, exist_ok=True)
-    
-    tmp_dir = os.path.join(tmp_root)
-    os.makedirs(tmp_dir, exist_ok=True)
+
+    # Reuse one directory and overwrite files on each frame.
+    tmp_dir = tmp_root
 
     rgb_path = os.path.join(tmp_dir, "rgb.png")
     pos_path = os.path.join(tmp_dir, "pos.npy")
@@ -101,7 +100,7 @@ def sam2_refine_dynamic_mask(
     if os.path.isfile(SAM2_PYTHON):
         cmd = [SAM2_PYTHON, SAM2_RUNNER_PY]
     else:
-        cmd = ["conda", "run", "-p", SAM2_ENV_NAME, "python", SAM2_RUNNER_PY]
+        cmd = ["conda", "run", "-p", SAM2_ENV_PREFIX, "python", SAM2_RUNNER_PY]
     cmd += [
         "--image", rgb_path,
         "--pos", pos_path,
