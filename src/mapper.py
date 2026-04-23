@@ -805,6 +805,23 @@ class Mapper(object):
             mininterval=0.5,
         )
 
+    def _mask_unobserved_dynamic_gradients(self, dynamic_observed_mask):
+        if dynamic_observed_mask is None:
+            return
+        if not hasattr(self.gaussians, "dygs") or self.gaussians.dygs.numel() == 0:
+            return
+
+        dynamic_unobserved_mask = torch.logical_and(
+            self.gaussians.dygs, ~dynamic_observed_mask
+        )
+        if not torch.any(dynamic_unobserved_mask):
+            return
+
+        for tensor_name in ["_xyz", "_features_dc", "_features_rest", "_opacity", "_scaling", "_rotation"]:
+            tensor = getattr(self.gaussians, tensor_name, None)
+            if tensor is not None and tensor.grad is not None:
+                tensor.grad[dynamic_unobserved_mask] = 0
+
     def _print_window_psnr_grid(self, stage, frame_psnr_records, rows=2, cols=4):
         if not self.enable_mapper_verbose_debug:
             return
@@ -1482,6 +1499,21 @@ class Mapper(object):
             gaussian_split = False
             # Deinsifying / Pruning Gaussians
             with torch.no_grad():
+                dynamic_observed_mask = None
+                has_dynamic_observation = True
+                if self.dynamic_model and hasattr(self.gaussians, "dygs") and self.gaussians.dygs.numel() > 0:
+                    dynamic_observed_mask = torch.zeros_like(
+                        self.gaussians.dygs,
+                        dtype=torch.bool,
+                        device=self.gaussians.dygs.device,
+                    )
+                    for visibility_filter in visibility_filter_acm:
+                        if visibility_filter.shape[0] == dynamic_observed_mask.shape[0]:
+                            dynamic_observed_mask |= (
+                                visibility_filter & self.gaussians.dygs
+                            )
+                    has_dynamic_observation = bool(dynamic_observed_mask.any().item())
+
                 self.occ_aware_visibility = {}
                 for idx in range((len(current_window))):
                     kf_idx = current_window[idx]
@@ -1495,11 +1527,23 @@ class Mapper(object):
                         prune_mode = self.config["mapping"]["Training"]["prune_mode"]
                         prune_coviz = 3
                         self.gaussians.n_obs.fill_(0)
+                        dygs_cpu = self.gaussians.dygs.cpu()
+                        dynamic_n_obs = torch.zeros_like(self.gaussians.n_obs)
                         for window_idx, visibility in self.occ_aware_visibility.items():
-                            self.gaussians.n_obs += visibility.cpu()
+                            visibility_cpu = visibility.cpu()
+                            self.gaussians.n_obs[~dygs_cpu] += visibility_cpu[~dygs_cpu]
+                            dynamic_n_obs[dygs_cpu] += visibility_cpu[dygs_cpu]
+                        self.gaussians.n_obs[dygs_cpu] = dynamic_n_obs[dygs_cpu]
+
                         to_prune = None
                         if prune_mode == "odometry":
                             to_prune = self.gaussians.n_obs < 3
+                            dynamic_seen = dynamic_n_obs > 0
+                            to_prune = torch.where(
+                                dygs_cpu,
+                                torch.logical_and(to_prune, dynamic_seen),
+                                to_prune,
+                            )
                             # make sure we don't split the gaussians, break here.
                         if prune_mode == "slam":  
                             sorted_window = sorted(current_window, reverse=True) 
@@ -1509,6 +1553,12 @@ class Mapper(object):
                             to_prune = torch.logical_and(  
                                 self.gaussians.n_obs <= prune_coviz,
                                 mask,
+                            )
+                            dynamic_seen = dynamic_n_obs > 0
+                            to_prune = torch.where(
+                                dygs_cpu,
+                                torch.logical_and(to_prune, dynamic_seen),
+                                to_prune,
                             )
                             # to_prune = torch.logical_or(torch.logical_and(self.gaussians.dygs==True, (self.gaussians.n_obs >= 1).cuda()), to_prune.cuda())  ##
                         if to_prune is not None and self.monocular:
@@ -1540,6 +1590,12 @@ class Mapper(object):
                 if rm_initdy:  
                     update_gaussian = (iters - i - 10 == 0) 
                 if update_gaussian:
+                    if dynamic_observed_mask is not None:
+                        dynamic_unobserved_mask = torch.logical_and(
+                            self.gaussians.dygs, ~dynamic_observed_mask
+                        )
+                        self.gaussians.xyz_gradient_accum[dynamic_unobserved_mask] = 0
+                        self.gaussians.denom[dynamic_unobserved_mask] = 0
                     self.gaussians.densify_and_prune(
                         self.opt_params.densify_grad_threshold,
                         self.gaussian_th,
@@ -1572,10 +1628,13 @@ class Mapper(object):
                 if dynamic_network and self.gaussians.deform_init :
 
                     loss_network.backward()
-                    self.gaussians.deform.optimizer.step()
+                    if has_dynamic_observation:
+                        self.gaussians.deform.optimizer.step()
                     self.gaussians.deform.optimizer.zero_grad(set_to_none=True)
 
                 if i > 100:
+                    if dynamic_observed_mask is not None:
+                        self._mask_unobserved_dynamic_gradients(dynamic_observed_mask)
                     self.gaussians.optimizer.step()
                     self.gaussians.optimizer.zero_grad(set_to_none=True)
                     self.gaussians.update_learning_rate(self.iteration_count)
